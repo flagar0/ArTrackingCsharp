@@ -29,6 +29,24 @@ namespace ArTracking
             InitializeComponent();
         }
 
+        public double[,] Transpose(double[,] matrix)
+        {
+            int w = matrix.GetLength(0);
+            int h = matrix.GetLength(1);
+
+            double[,] result = new double[h, w];
+
+            for (int i = 0; i < w; i++)
+            {
+                for (int j = 0; j < h; j++)
+                {
+                    result[j, i] = matrix[i, j];
+                }
+            }
+
+            return result;
+        }
+
 
 
         public void Form1_Load(object sender, EventArgs e)
@@ -103,17 +121,23 @@ namespace ArTracking
                                                      rvec,
                                                      tvec,
                                                      80 * 0.5f);
-                                trans_x = tvecs.Data.ToString();
+                                trans_x = tvec[0].ToString();
                             }
                         }
                         #endregion
 
+                        #region Calculo para distancia do cubo
+                        Mat rot_mtx = Mat.Zeros(3, 3, DepthType.Default,1);
+                        //CvInvoke.Rodrigues(rvecs,rot_mtx);
+
+                        #endregion
                     }
 
                     #region Display current frame plus drawings
+                    CvInvoke.PutText(frame, ("translation_x: " + trans_x), new Point(0, 60), Emgu.CV.CvEnum.FontFace.HersheySimplex, 0.6, new MCvScalar(0, 255, 0), 2, LineType.Filled);
                     CvInvoke.Imshow("Image", frame);
                     CvInvoke.WaitKey(24);
-                    CvInvoke.PutText(frame, ("translation_x: "+ trans_x), new Point(0, 60));
+                   
                     #endregion
 
 
