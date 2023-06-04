@@ -12,6 +12,7 @@ using Emgu.CV.Aruco;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
 using Emgu.CV.Util;
+using Numpy;
 
 namespace ArTracking
 {
@@ -29,26 +30,6 @@ namespace ArTracking
             InitializeComponent();
         }
 
-        public double[,] Transpose(double[,] matrix)
-        {
-            int w = matrix.GetLength(0);
-            int h = matrix.GetLength(1);
-
-            double[,] result = new double[h, w];
-
-            for (int i = 0; i < w; i++)
-            {
-                for (int j = 0; j < h; j++)
-                {
-                    result[j, i] = matrix[i, j];
-                }
-            }
-
-            return result;
-        }
-
-
-
         public void Form1_Load(object sender, EventArgs e)
         {
             #region Initialize video capture object on default webcam (0)
@@ -60,6 +41,7 @@ namespace ArTracking
 
             ArucoParameters = new DetectorParameters();
             ArucoParameters = DetectorParameters.GetDefault();
+            ArucoParameters.CornerRefinementMethod = DetectorParameters.RefinementMethod.Contour;
 
 
             Calibracao();
@@ -80,31 +62,32 @@ namespace ArTracking
 
                 if (!frame.IsEmpty)
                 {
-                    #region Detect markers on last retrieved frame
-                    VectorOfInt ids = new VectorOfInt(); // name/id of the detected markers
-                    VectorOfVectorOfPointF corners = new VectorOfVectorOfPointF(); // corners of the detected marker
-                    VectorOfVectorOfPointF rejected = new VectorOfVectorOfPointF(); // rejected contours
-                    ArucoInvoke.DetectMarkers(frame, ArucoDict, corners, ids, ArucoParameters, rejected);
+                    #region Detect markers 
+                    VectorOfInt ids = new VectorOfInt(); 
+                    VectorOfVectorOfPointF corners = new VectorOfVectorOfPointF(); 
+                    VectorOfVectorOfPointF rejected = new VectorOfVectorOfPointF(); 
+                    ArucoInvoke.DetectMarkers(frame, ArucoDict, corners, ids, ArucoParameters, rejected); ;
                     #endregion
 
-                    // If we detected at least one marker
+                    
                     if (ids.Size > 0)
                     {
                         
                         #region Draw detected markers
-                        ArucoInvoke.DrawDetectedMarkers(frame, corners, ids, new MCvScalar(255, 0, 255));
+                        ArucoInvoke.DrawDetectedMarkers(frame, corners,ids, new MCvScalar(255, 0, 255));
                         #endregion
 
 
-                        #region Estimate pose for each marker using camera calibration matrix and distortion coefficents
+                        #region Estimate pose of marker
                         Mat rvecs = new Mat(); // rotation vector
                         Mat tvecs = new Mat(); // translation vector
-                        ArucoInvoke.EstimatePoseSingleMarkers(corners, 80, cameraMatrix, distortionMatrix, rvecs, tvecs);
+                        ArucoInvoke.EstimatePoseSingleMarkers(corners, (float)13.2, cameraMatrix, distortionMatrix, rvecs, tvecs);
                         #endregion
 
                         #region Draw 3D orthogonal axis on markers using estimated pose
                         for (int i = 0; i < ids.Size; i++)
                         {
+                            //Mat choosen_marker_position = getPositionMatrix(rvecs.Row(i), tvecs.Row(i));
                             using (Mat rvecMat = rvecs.Row(i))
                             using (Mat tvecMat = tvecs.Row(i))
                             using (VectorOfDouble rvec = new VectorOfDouble())
@@ -120,17 +103,12 @@ namespace ArTracking
                                                      distortionMatrix,
                                                      rvec,
                                                      tvec,
-                                                     80 * 0.5f);
+                                                     5);
                                 trans_x = tvec[0].ToString();
                             }
                         }
                         #endregion
 
-                        #region Calculo para distancia do cubo
-                        Mat rot_mtx = Mat.Zeros(3, 3, DepthType.Default,1);
-                        //CvInvoke.Rodrigues(rvecs,rot_mtx);
-
-                        #endregion
                     }
 
                     #region Display current frame plus drawings
@@ -154,11 +132,19 @@ namespace ArTracking
             CvInvoke.DestroyAllWindows();
         }
 
+        public Mat getPositionMatrix(Mat rvec, Mat tvec)
+        {
+            #region Calculo para distancia do cubo
+
+            return null;
+            #endregion
+        }
+
         public void Calibracao()
         {
             #region Initialize Camera calibration matrix with distortion coefficients 
             // Calibration done with https://docs.opencv.org/3.4.3/d7/d21/tutorial_interactive_calibration.html
-            String cameraConfigurationFile = "C:/Users/Interlab.INTERLAB-XPS/Documents/flavio/ARemC/ArTracking/ArTracking/cameraParameters.xml";
+            String cameraConfigurationFile = "C:/Users/Flavio Midea/Downloads/InterLab/ArCsharp/ArTrackingCsharp/ArTracking/cameraParameters.xml";
             FileStorage fs = new FileStorage(cameraConfigurationFile, FileStorage.Mode.Read);
             if (!fs.IsOpened)
             {
@@ -171,6 +157,8 @@ namespace ArTracking
             fs["dist_coeffs"].ReadMat(distortionMatrix);
             #endregion
         }
+
+
     }
     } 
 

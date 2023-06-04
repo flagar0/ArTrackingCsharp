@@ -42,6 +42,18 @@
     <Reference Include="Emgu.CV.World, Version=4.1.0.3408, Culture=neutral, PublicKeyToken=7281126722ab4438, processorArchitecture=MSIL">
       <HintPath>..\packages\EMGU.CV.4.1.0.3408\lib\net35\Emgu.CV.World.dll</HintPath>
     </Reference>
+    <Reference Include="Numpy, Version=3.10.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Numpy.3.11.1.33\lib\netstandard2.0\Numpy.dll</HintPath>
+    </Reference>
+    <Reference Include="Python.Deployment, Version=1.5.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Python.Deployment.2.0.0\lib\netstandard2.0\Python.Deployment.dll</HintPath>
+    </Reference>
+    <Reference Include="Python.Included, Version=3.10.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Python.Included.3.11.1\lib\netstandard2.0\Python.Included.dll</HintPath>
+    </Reference>
+    <Reference Include="Python.Runtime, Version=3.0.1.0, Culture=neutral, PublicKeyToken=5000fea6cba702dd, processorArchitecture=MSIL">
+      <HintPath>..\packages\pythonnet.3.0.1\lib\netstandard2.0\Python.Runtime.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
