@@ -12,7 +12,6 @@ using Emgu.CV.Aruco;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
 using Emgu.CV.Util;
-using Numpy;
 
 namespace ArTracking
 {
@@ -23,12 +22,38 @@ namespace ArTracking
         DetectorParameters ArucoParameters;
         public bool recording = false;
         Mat cameraMatrix, distortionMatrix;
-        public string trans_x;
+        Dictionary<string,string> Dados = new Dictionary<string, string>() {
+            {"translation_x", ""},
+            {"translation_y", ""},
+            {"translation_z", ""}
+
+
+        };
 
         public Form1()
         {
             InitializeComponent();
         }
+
+        public double[,] Transpose(double[,] matrix)
+        {
+            int w = matrix.GetLength(0);
+            int h = matrix.GetLength(1);
+
+            double[,] result = new double[h, w];
+
+            for (int i = 0; i < w; i++)
+            {
+                for (int j = 0; j < h; j++)
+                {
+                    result[j, i] = matrix[i, j];
+                }
+            }
+
+            return result;
+        }
+
+
 
         public void Form1_Load(object sender, EventArgs e)
         {
@@ -41,7 +66,6 @@ namespace ArTracking
 
             ArucoParameters = new DetectorParameters();
             ArucoParameters = DetectorParameters.GetDefault();
-            ArucoParameters.CornerRefinementMethod = DetectorParameters.RefinementMethod.Contour;
 
 
             Calibracao();
@@ -52,9 +76,22 @@ namespace ArTracking
         private void button1_Click(object sender, EventArgs e)
         {
             recording = true;
+            Tracking();
+        }
+
+
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            recording = false;
+            CvInvoke.DestroyAllWindows();
+        }
+
+        public void Tracking()
+        {
             while (recording)
             {
-                
+
                 #region Capture a frame with webcam
                 Mat frame = new Mat();
                 frame = capture.QueryFrame();
@@ -62,32 +99,31 @@ namespace ArTracking
 
                 if (!frame.IsEmpty)
                 {
-                    #region Detect markers 
-                    VectorOfInt ids = new VectorOfInt(); 
-                    VectorOfVectorOfPointF corners = new VectorOfVectorOfPointF(); 
-                    VectorOfVectorOfPointF rejected = new VectorOfVectorOfPointF(); 
-                    ArucoInvoke.DetectMarkers(frame, ArucoDict, corners, ids, ArucoParameters, rejected); ;
+                    #region Detect markers on last retrieved frame
+                    VectorOfInt ids = new VectorOfInt(); // name/id of the detected markers
+                    VectorOfVectorOfPointF corners = new VectorOfVectorOfPointF(); // corners of the detected marker
+                    VectorOfVectorOfPointF rejected = new VectorOfVectorOfPointF(); // rejected contours
+                    ArucoInvoke.DetectMarkers(frame, ArucoDict, corners, ids, ArucoParameters, rejected);
                     #endregion
 
-                    
+                    // If we detected at least one marker
                     if (ids.Size > 0)
                     {
-                        
+
                         #region Draw detected markers
-                        ArucoInvoke.DrawDetectedMarkers(frame, corners,ids, new MCvScalar(255, 0, 255));
+                        ArucoInvoke.DrawDetectedMarkers(frame, corners, ids, new MCvScalar(255, 0, 255));
                         #endregion
 
 
-                        #region Estimate pose of marker
+                        #region Estimate pose for each marker using camera calibration matrix and distortion coefficents
                         Mat rvecs = new Mat(); // rotation vector
                         Mat tvecs = new Mat(); // translation vector
-                        ArucoInvoke.EstimatePoseSingleMarkers(corners, (float)13.2, cameraMatrix, distortionMatrix, rvecs, tvecs);
+                        ArucoInvoke.EstimatePoseSingleMarkers(corners, 80, cameraMatrix, distortionMatrix, rvecs, tvecs);
                         #endregion
 
                         #region Draw 3D orthogonal axis on markers using estimated pose
                         for (int i = 0; i < ids.Size; i++)
                         {
-                            //Mat choosen_marker_position = getPositionMatrix(rvecs.Row(i), tvecs.Row(i));
                             using (Mat rvecMat = rvecs.Row(i))
                             using (Mat tvecMat = tvecs.Row(i))
                             using (VectorOfDouble rvec = new VectorOfDouble())
@@ -103,48 +139,52 @@ namespace ArTracking
                                                      distortionMatrix,
                                                      rvec,
                                                      tvec,
-                                                     5);
-                                trans_x = tvec[0].ToString();
+                                                     80 * 0.5f);
+
+                                #region Guarda os valores de translacao
+                                Dados["translation_x"] = tvec[0].ToString();
+                                Dados["translation_y"] = tvec[1].ToString();
+                                Dados["translation_z"] = tvec[2].ToString();
+                                #endregion
                             }
                         }
                         #endregion
 
+                        #region Calculo para distancia do cubo
+                        Mat rot_mtx = Mat.Zeros(3, 3, DepthType.Default, 1);
+                        //CvInvoke.Rodrigues(rvecs,rot_mtx);
+
+                        #endregion
                     }
 
-                    #region Display current frame plus drawings
-                    CvInvoke.PutText(frame, ("translation_x: " + trans_x), new Point(0, 60), Emgu.CV.CvEnum.FontFace.HersheySimplex, 0.6, new MCvScalar(0, 255, 0), 2, LineType.Filled);
-                    CvInvoke.Imshow("Image", frame);
-                    CvInvoke.WaitKey(24);
-                   
-                    #endregion
 
+                    MostraVideos(frame);
 
                 }
 
             }
         }
 
-
-
-        private void button2_Click(object sender, EventArgs e)
+        public void MostraVideos(Mat frame)
         {
-            recording = false;
-            CvInvoke.DestroyAllWindows();
-        }
+            #region Mostra da tela de tracking
+            CvInvoke.NamedWindow("Tracking", NamedWindowType.Normal);
+            CvInvoke.PutText(frame, ("translation_x: " + Dados["translation_x"]), new Point(0, 60), Emgu.CV.CvEnum.FontFace.HersheySimplex, 0.5, new MCvScalar(0, 255, 0), 2, LineType.Filled);
+            CvInvoke.PutText(frame, ("translation_y: " + Dados["translation_y"]), new Point(0, 80), Emgu.CV.CvEnum.FontFace.HersheySimplex, 0.5, new MCvScalar(0, 255, 0), 2, LineType.Filled);
+            CvInvoke.PutText(frame, ("translation_z: " + Dados["translation_z"]), new Point(0, 100), Emgu.CV.CvEnum.FontFace.HersheySimplex, 0.5, new MCvScalar(0, 255, 0), 2, LineType.Filled);
+            CvInvoke.Imshow("Tracking", frame);
+            CvInvoke.WaitKey(24);
+    
 
-        public Mat getPositionMatrix(Mat rvec, Mat tvec)
-        {
-            #region Calculo para distancia do cubo
-
-            return null;
             #endregion
         }
+
 
         public void Calibracao()
         {
             #region Initialize Camera calibration matrix with distortion coefficients 
             // Calibration done with https://docs.opencv.org/3.4.3/d7/d21/tutorial_interactive_calibration.html
-            String cameraConfigurationFile = "C:/Users/Flavio Midea/Downloads/InterLab/ArCsharp/ArTrackingCsharp/ArTracking/cameraParameters.xml";
+            String cameraConfigurationFile = "C:/Users/Interlab.INTERLAB-XPS/Documents/flavio/ARemC/ArTracking/ArTracking/cameraParameters.xml";
             FileStorage fs = new FileStorage(cameraConfigurationFile, FileStorage.Mode.Read);
             if (!fs.IsOpened)
             {
@@ -157,8 +197,6 @@ namespace ArTracking
             fs["dist_coeffs"].ReadMat(distortionMatrix);
             #endregion
         }
-
-
     }
     } 
 
