@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Data;
 using System.Drawing;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -12,6 +13,7 @@ using Emgu.CV.Aruco;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
 using Emgu.CV.Util;
+using NumSharp;
 
 namespace ArTracking
 {
@@ -142,20 +144,15 @@ namespace ArTracking
                                                      80 * 0.5f);
 
                                 #region Guarda os valores de translacao
-                                Dados["translation_x"] = tvec[0].ToString();
-                                Dados["translation_y"] = tvec[1].ToString();
-                                Dados["translation_z"] = tvec[2].ToString();
+                                NDArray matrixPosition = GetPositionMatrix(rvec,tvec);
+                                Dados["translation_x"] = matrixPosition[0].ToString();
+                                Dados["translation_y"] = matrixPosition[1].ToString();
+                                Dados["translation_z"] = matrixPosition[2].ToString();
                                 #endregion
                             }
                         }
                         #endregion
-
-                        #region Calculo para distancia do cubo
-                        Mat rot_mtx = Mat.Zeros(3, 3, DepthType.Default, 1);
-                        //CvInvoke.Rodrigues(rvecs,rot_mtx);
-
-                        #endregion
-                    }
+                   }
 
 
                     MostraVideos(frame);
@@ -168,7 +165,7 @@ namespace ArTracking
         public void MostraVideos(Mat frame)
         {
             #region Mostra da tela de tracking
-            CvInvoke.NamedWindow("Tracking", NamedWindowType.Normal);
+            CvInvoke.NamedWindow("Tracking", WindowFlags.Normal);
             CvInvoke.PutText(frame, ("translation_x: " + Dados["translation_x"]), new Point(0, 60), Emgu.CV.CvEnum.FontFace.HersheySimplex, 0.5, new MCvScalar(0, 255, 0), 2, LineType.Filled);
             CvInvoke.PutText(frame, ("translation_y: " + Dados["translation_y"]), new Point(0, 80), Emgu.CV.CvEnum.FontFace.HersheySimplex, 0.5, new MCvScalar(0, 255, 0), 2, LineType.Filled);
             CvInvoke.PutText(frame, ("translation_z: " + Dados["translation_z"]), new Point(0, 100), Emgu.CV.CvEnum.FontFace.HersheySimplex, 0.5, new MCvScalar(0, 255, 0), 2, LineType.Filled);
@@ -179,7 +176,38 @@ namespace ArTracking
             #endregion
         }
 
+        public NDArray ConvertMatToNDArray(Mat mat)
+        {
+            int rows = mat.Rows;
+            int cols = mat.Cols;
+            int channels = mat.NumberOfChannels;
+            byte[] data = new byte[rows * cols * channels];
 
+            Marshal.Copy(mat.DataPointer, data, 0, data.Length);
+
+            NDArray ndarray = new NDArray(data, new Shape(rows, cols, channels));
+
+            return ndarray;
+        }
+
+        public NDArray GetPositionMatrix(VectorOfDouble rvec, VectorOfDouble tvec)
+        {
+            Mat rotMtx = new Mat();
+            CvInvoke.Rodrigues(rvec, rotMtx);
+
+            Mat tvecTranspose = new Mat();
+            CvInvoke.Transpose(tvec, tvecTranspose);
+
+            NDArray position = np.concatenate(
+                (ConvertMatToNDArray(rotMtx), ConvertMatToNDArray(tvecTranspose)), axis: 1);
+            position = np.concatenate(
+                (position, np.array(new double[,] { { 0, 0, 0, 1 } })));
+
+            return position;
+            
+        }
+
+  
         public void Calibracao()
         {
             #region Initialize Camera calibration matrix with distortion coefficients 
