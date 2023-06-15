@@ -37,23 +37,6 @@ namespace ArTracking
             InitializeComponent();
         }
 
-        public double[,] Transpose(double[,] matrix)
-        {
-            int w = matrix.GetLength(0);
-            int h = matrix.GetLength(1);
-
-            double[,] result = new double[h, w];
-
-            for (int i = 0; i < w; i++)
-            {
-                for (int j = 0; j < h; j++)
-                {
-                    result[j, i] = matrix[i, j];
-                }
-            }
-
-            return result;
-        }
 
 
 
@@ -62,7 +45,7 @@ namespace ArTracking
             #region Initialize video capture object on default webcam (0)
             // Instantiate a webcam abstraction
 
-            capture = new VideoCapture(0);
+            capture = new VideoCapture();
 
             ArucoDict = new Dictionary(Dictionary.PredefinedDictionaryName.Dict6X6_250);
 
@@ -134,8 +117,13 @@ namespace ArTracking
                                 double[] values = new double[3];
                                 rvecMat.CopyTo(values);
                                 rvec.Push(values);
+                                var rvecND = new NDArray(values);
+
                                 tvecMat.CopyTo(values);
                                 tvec.Push(values);
+                                var tvecND = new NDArray(values);
+
+
                                 ArucoInvoke.DrawAxis(frame,
                                                      cameraMatrix,
                                                      distortionMatrix,
@@ -144,10 +132,10 @@ namespace ArTracking
                                                      80 * 0.5f);
 
                                 #region Guarda os valores de translacao
-                                NDArray matrixPosition = GetPositionMatrix(rvec,tvec);
-                                Dados["translation_x"] = matrixPosition[0].ToString();
-                                Dados["translation_y"] = matrixPosition[1].ToString();
-                                Dados["translation_z"] = matrixPosition[2].ToString();
+                                NDArray matrixPosition = GetPositionMatrix(rvecND,tvecND);
+                                Dados["translation_x"] = rvecND[0].ToString();
+                                Dados["translation_y"] = rvecND[1].ToString();
+                                Dados["translation_z"] = rvecND[2].ToString();
                                 #endregion
                             }
                         }
@@ -161,6 +149,8 @@ namespace ArTracking
 
             }
         }
+
+
 
         public void MostraVideos(Mat frame)
         {
@@ -176,38 +166,34 @@ namespace ArTracking
             #endregion
         }
 
-        public NDArray ConvertMatToNDArray(Mat mat)
+
+        public NDArray GetPositionMatrix(NDArray rvec, NDArray tvec)
         {
-            int rows = mat.Rows;
-            int cols = mat.Cols;
-            int channels = mat.NumberOfChannels;
-            byte[] data = new byte[rows * cols * channels];
+            var rotMtx = new Mat(3, 3, DepthType.Cv64F, 1);
+            double[] values = new double[3];
+            double[] values2 = new double[3];
+            rvec.CopyTo(values);
+            VectorOfDouble rvecVec = new VectorOfDouble();
+            
+            rvecVec.Push(values);
+            CvInvoke.Rodrigues(rvecVec, rotMtx);
 
-            Marshal.Copy(mat.DataPointer, data, 0, data.Length);
+            rotMtx.CopyTo(values2);
+            
+            NDArray rotMtxND = new NDArray(values2);
+            var position = np.concatenate(new NDArray[] { rotMtxND, np.transpose(tvec)});
 
-            NDArray ndarray = new NDArray(data, new Shape(rows, cols, channels));
-
-            return ndarray;
-        }
-
-        public NDArray GetPositionMatrix(VectorOfDouble rvec, VectorOfDouble tvec)
-        {
-            Mat rotMtx = new Mat();
-            CvInvoke.Rodrigues(rvec, rotMtx);
-
-            Mat tvecTranspose = new Mat();
-            CvInvoke.Transpose(tvec, tvecTranspose);
-
-            NDArray position = np.concatenate(
-                (ConvertMatToNDArray(rotMtx), ConvertMatToNDArray(tvecTranspose)), axis: 1);
+            var zeroRow = new NDArray(new double[,] { { 0, 0, 0, 1 } });
             position = np.concatenate(
-                (position, np.array(new double[,] { { 0, 0, 0, 1 } })));
+                new NDArray[] { position, zeroRow });
+
 
             return position;
-            
+
         }
 
-  
+        
+
         public void Calibracao()
         {
             #region Initialize Camera calibration matrix with distortion coefficients 
