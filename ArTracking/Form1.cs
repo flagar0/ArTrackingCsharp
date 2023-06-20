@@ -7,11 +7,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using Emgu.CV; 
-using Emgu.CV.Aruco;
-using Emgu.CV.CvEnum;
-using Emgu.CV.Structure;
-using Emgu.CV.Util;
 using OpenCvSharp;
 using OpenCvSharp.Aruco;
 using OpenCvSharp.Internal.Vectors;
@@ -34,31 +29,10 @@ namespace ArTracking
 
         };
 
-
-
         public Form1()
         {
             InitializeComponent();
         }
-
-        public double[,] Transpose(double[,] matrix)
-        {
-            int w = matrix.GetLength(0);
-            int h = matrix.GetLength(1);
-
-            double[,] result = new double[h, w];
-
-            for (int i = 0; i < w; i++)
-            {
-                for (int j = 0; j < h; j++)
-                {
-                    result[j, i] = matrix[i, j];
-                }
-            }
-
-            return result;
-        }
-
 
 
         public void Form1_Load(object sender, EventArgs e)
@@ -71,9 +45,7 @@ namespace ArTracking
              ArucoDict = CvAruco.GetPredefinedDictionary(PredefinedDictionaryName.Dict6X6_250);
 
             ArucoParameters = new DetectorParameters();
-            ArucoParameters = DetectorParameters.
-
-
+            //ArucoParameters = DetectorParameters.
             Calibracao();
             #endregion
         }
@@ -117,9 +89,9 @@ namespace ArTracking
                 {
                     #region Detect markers on last retrieved frame
                     int[] ids= new int[0]; ; // name/id of the detected markers
-                    Point2f corners = new Point2f(); // corners of the detected marker
-                    Point2f rejected = new Point2f(); // rejected contours
-                    CvAruco.DetectMarkers(frame, ArucoDict, corners, ids, ArucoParameters, rejected);
+                    Point2f[][] corners; // corners of the detected marker
+                    Point2f[][] rejected; // rejected contours
+                    CvAruco.DetectMarkers(frame, ArucoDict, out corners, out ids, ArucoParameters, out rejected);
                     #endregion
 
                     // If we detected at least one marker
@@ -138,32 +110,32 @@ namespace ArTracking
                         #endregion
 
                         #region Draw 3D orthogonal axis on markers using estimated pose
-                        for (int i = 0; i < ids.Size; i++)
+
+                        CvAruco.DrawDetectedMarkers(frame, corners, ids, new Scalar(255, 0, 0));
+                        
+                        for (int i = 0; i < ids.Length; i++)
                         {
-                            using (Mat rvecMat = rvecs.Row(i))
-                            using (Mat tvecMat = tvecs.Row(i))
+                            using (Mat rvecmat = rvecs.Row(i))
+                            using (Mat tvecmat = tvecs.Row(i))
                             using (VectorOfDouble rvec = new VectorOfDouble())
                             using (VectorOfDouble tvec = new VectorOfDouble())
                             {
-                                double[] values = new double[3];
-                                rvecMat.CopyTo(values);
-                                rvec.Push(values);
-                                tvecMat.CopyTo(values);
-                                tvec.(values);
+                                var teste = (rvecmat.Col(0));
                                 Cv2.DrawFrameAxes(frame,
                                                      cameraMatrix,
                                                      distortionMatrix,
-                                                     rvec,
-                                                     tvec,
+                                                     rvecmat,
+                                                     tvecmat,
                                                      80 * 0.5f);
 
-                                #region Guarda os valores de translacao
-                                Dados["translation_x"] = tvec..ToString();
-                                Dados["translation_y"] = tvec[1].ToString();
-                                Dados["translation_z"] = tvec[2].ToString();
+                                #region guarda os valores de translacao
+                                // Dados["translation_x"] = tvecmat.;
+                                // Dados["translation_y"] = tvecmat[1].tostring();
+                                // Dados["translation_z"] = tvecmat[2].tostring();
                                 #endregion
                             }
                         }
+                        
                         #endregion
 
                     }
@@ -195,13 +167,13 @@ namespace ArTracking
         {
             #region Initialize Camera calibration matrix with distortion coefficients 
             // Calibration done with https://docs.opencv.org/3.4.3/d7/d21/tutorial_interactive_calibration.html
-            String cameraConfigurationFile = "C:/Users/Interlab.INTERLAB-XPS/Documents/flavio/ARemC/ArTracking/ArTracking/cameraParameters.xml";
+            string cameraConfigurationFile = "C:/Users/Interlab.INTERLAB-XPS/Documents/flavio/ARemC/ArTracking/cameraParameters.xml";
             FileStorage fs = new FileStorage(cameraConfigurationFile, FileStorage.Modes.Read);
-            if (!fs.IsDisposed)
+            /*if (!fs.IsDisposed)
             {
                 Console.WriteLine("Could not open configuration file " + cameraConfigurationFile);
                 return;
-            }   
+            }   */
              cameraMatrix = new Mat(3,3, 1);
              distortionMatrix = new Mat(1, 8, 1);
             fs["cameraMatrix"].ReadMat(cameraMatrix);
