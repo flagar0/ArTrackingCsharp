@@ -7,9 +7,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using NumSharp;
 using OpenCvSharp;
 using OpenCvSharp.Aruco;
 using OpenCvSharp.Internal.Vectors;
+//using NumsharpOpencvSharpConvertor;
 
 namespace ArTracking
 {
@@ -21,7 +23,7 @@ namespace ArTracking
         public bool recording = false;
         Mat cameraMatrix, distortionMatrix;
 
-        Dictionary<string,string> Dados = new Dictionary<string, string>() {
+        Dictionary<string, string> Dados = new Dictionary<string, string>() {
             {"translation_x", ""},
             {"translation_y", ""},
             {"translation_z", ""}
@@ -40,9 +42,9 @@ namespace ArTracking
             #region Initialize video capture object on default webcam (0)
             // Instantiate a webcam abstraction
 
-            capture = new VideoCapture(0); 
+            capture = new VideoCapture(0);
 
-             ArucoDict = CvAruco.GetPredefinedDictionary(PredefinedDictionaryName.Dict6X6_250);
+            ArucoDict = CvAruco.GetPredefinedDictionary(PredefinedDictionaryName.Dict6X6_250);
 
             ArucoParameters = new DetectorParameters();
             //ArucoParameters = DetectorParameters.
@@ -88,7 +90,7 @@ namespace ArTracking
                 if (!frame.IsDisposed)
                 {
                     #region Detect markers on last retrieved frame
-                    int[] ids= new int[0]; ; // name/id of the detected markers
+                    int[] ids = new int[0]; ; // name/id of the detected markers
                     Point2f[][] corners; // corners of the detected marker
                     Point2f[][] rejected; // rejected contours
                     CvAruco.DetectMarkers(frame, ArucoDict, out corners, out ids, ArucoParameters, out rejected);
@@ -111,16 +113,16 @@ namespace ArTracking
 
                         #region Draw 3D orthogonal axis on markers using estimated pose
 
-                        CvAruco.DrawDetectedMarkers(frame, corners, ids, new Scalar(255, 0, 0));
-                        
+
                         for (int i = 0; i < ids.Length; i++)
                         {
                             using (Mat rvecmat = rvecs.Row(i))
                             using (Mat tvecmat = tvecs.Row(i))
-                            using (VectorOfDouble rvec = new VectorOfDouble())
-                            using (VectorOfDouble tvec = new VectorOfDouble())
                             {
-                                var teste = (rvecmat.Col(0));
+                                var positionMatrix = getPositionMatrix(rvecmat, tvecmat);
+
+
+
                                 Cv2.DrawFrameAxes(frame,
                                                      cameraMatrix,
                                                      distortionMatrix,
@@ -135,7 +137,7 @@ namespace ArTracking
                                 #endregion
                             }
                         }
-                        
+
                         #endregion
 
                     }
@@ -146,6 +148,34 @@ namespace ArTracking
                 }
 
             }
+        }
+
+        public NDArray getPositionMatrix(Mat rvec, Mat tvec)
+        {
+            Mat rotMtx = new Mat(3, 3, 1);
+            Cv2.Rodrigues(rvec, rotMtx);
+
+            var NDrotMtx = Converter.ToNDArray(rotMtx);
+            var NDtvec = Converter.ToNDArray(tvec.T());
+
+            NDArray position = np.concatenate((NDrotMtx, NDtvec[0]), 1);
+
+            position = np.concatenate((position, np.array(new double[,] { { 0,0,0,1 } })));
+
+            return position;
+        }
+
+        public (Mat,Mat) getRvecAndTvec(NDArray position)
+        {
+            var tvecT = position[0][3].delete(new int[] { 3 });
+
+            position = position.delete(new int[,] { {3 },{0 } });
+            position = position.delete(new int[,] { { 3 }, { 1 } });
+
+            Mat rvecT = new Mat();
+            Cv2.Rodrigues(Converter.ToMat(position), rvecT);
+
+            return (rvecT.T() , Converter.ToMat(tvecT).T());
         }
 
         public void MostraVideos(Mat frame)
