@@ -192,6 +192,21 @@ namespace ArTracking
             #endregion
         }
 
+        public NDArray GetRvec(NDArray positionMatrix)
+        {
+            positionMatrix = np.delete(positionMatrix, 3, 0);
+            positionMatrix = np.delete(positionMatrix, 3, 1);
+
+            NDArray rvecT = cv2.Rodrigues(positionMatrix);
+            return rvecT.T;
+        }
+
+        public NDArray GetTvec(NDArray positionMatrix)
+        {   
+            NDArray tvecT = np.delete(positionMatrix, new Slice(":,3"), 3);
+            return tvecT.T;
+        }
+
 
         public void Calibracao()
         {
