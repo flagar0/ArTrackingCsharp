@@ -119,14 +119,15 @@ namespace ArTracking
                             using (Mat rvecmat = rvecs.Row(i))
                             using (Mat tvecmat = tvecs.Row(i))
                             {
-                                var positionMatrix = getPositionMatrix(rvecmat, tvecmat);
-
+                                //var positionMatrix = getPositionMatrix(rvecmat, tvecmat);
+                                Mat R = new Mat(3,3,1); 
+                                Cv2.Rodrigues(rvecmat, R);
 
 
                                 Cv2.DrawFrameAxes(frame,
                                                      cameraMatrix,
                                                      distortionMatrix,
-                                                     rvecmat,
+                                                     R,
                                                      tvecmat,
                                                      80 * 0.5f);
 
@@ -192,12 +193,13 @@ namespace ArTracking
             #endregion
         }
 
+        /*
         public NDArray GetRvec(NDArray positionMatrix)
         {
             positionMatrix = np.delete(positionMatrix, 3, 0);
             positionMatrix = np.delete(positionMatrix, 3, 1);
 
-            NDArray rvecT = cv2.Rodrigues(positionMatrix);
+            NDArray rvecT = Cv2.Rodrigues(positionMatrix);
             return rvecT.T;
         }
 
@@ -207,22 +209,25 @@ namespace ArTracking
             return tvecT.T;
         }
 
-
+        */
         public void Calibracao()
         {
             #region Initialize Camera calibration matrix with distortion coefficients 
             // Calibration done with https://docs.opencv.org/3.4.3/d7/d21/tutorial_interactive_calibration.html
-            string cameraConfigurationFile = "C:/Users/Interlab.INTERLAB-XPS/Documents/flavio/ARemC/ArTracking/cameraParameters.xml";
+            string cameraConfigurationFile = "C:/Users/Flavio Midea/Downloads/InterLab/ArCsharp/ArTrackingCsharp/ArTracking/cameraParameters.xml";
             FileStorage fs = new FileStorage(cameraConfigurationFile, FileStorage.Modes.Read);
             /*if (!fs.IsDisposed)
             {
                 Console.WriteLine("Could not open configuration file " + cameraConfigurationFile);
                 return;
             }   */
-             cameraMatrix = new Mat(3,3, 1);
-             distortionMatrix = new Mat(1, 8, 1);
+             cameraMatrix = new Mat(3,3, MatType.CV_8SC1); //CV_8SC1
+              distortionMatrix = new Mat(1, 8, 1);
             fs["cameraMatrix"].ReadMat(cameraMatrix);
             fs["dist_coeffs"].ReadMat(distortionMatrix);
+
+            double[] testee;
+            cameraMatrix.GetArray<double>(out testee);
             #endregion
         }
     }
