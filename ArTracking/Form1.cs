@@ -214,20 +214,18 @@ namespace ArTracking
         {
             #region Initialize Camera calibration matrix with distortion coefficients 
             // Calibration done with https://docs.opencv.org/3.4.3/d7/d21/tutorial_interactive_calibration.html
-            string cameraConfigurationFile = "C:/Users/Flavio Midea/Downloads/InterLab/ArCsharp/ArTrackingCsharp/ArTracking/cameraParameters.xml";
+            string cameraConfigurationFile = "C:/Users/Interlab.INTERLAB-XPS/Documents/flavio/ARemC/ArTracking/cameraParameters.xml";
             FileStorage fs = new FileStorage(cameraConfigurationFile, FileStorage.Modes.Read);
             /*if (!fs.IsDisposed)
             {
                 Console.WriteLine("Could not open configuration file " + cameraConfigurationFile);
                 return;
             }   */
-             cameraMatrix = new Mat(3,3, MatType.CV_8SC1); //CV_8SC1
-              distortionMatrix = new Mat(1, 8, 1);
-            fs["cameraMatrix"].ReadMat(cameraMatrix);
-            fs["dist_coeffs"].ReadMat(distortionMatrix);
+            //  = new Mat(3,3, MatType.CV_8SC1); //CV_8SC1
+            //  distortionMatrix = new Mat(1, 8, 1);
+            cameraMatrix = fs["cameraMatrix"].ReadMat();
+            distortionMatrix = fs["dist_coeffs"].ReadMat();
 
-            double[] testee;
-            cameraMatrix.GetArray<double>(out testee);
             #endregion
         }
     }
